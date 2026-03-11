@@ -59,26 +59,12 @@ class Laminate:
         return self.ABD
 
     def InverseABD(self):
-        self.InvABD = np.zeros((6,6))
+        return la.inv(self.InvABD)
 
-        A = self.ABD[0:3,0:3]
-        B = self.ABD[3:6,0:3]
-        D = self.ABD[3:6,3:6]
-
-        self.InvABD[0:3,0:3] += la.inv(A) + la.inv(A) @ B @ la.inv(D - B @ la.inv(A) @ B) @ B @ la.inv(A)
-        self.InvABD[3:6,0:3] += - A @ B @ la.inv(D - B @ la.inv(A) @ B)
-        self.InvABD[0:3,3:6] += - A @ B @ la.inv(D - B @ la.inv(A) @ B)
-        self.InvABD[3:6,3:6] += la.inv(D - B @ la.inv(A) @ B)
-
-        return self.InvABD
-
-plies = [0,45,-45,90]
+plies = [0,45,45,0]
 thickness = [0.125,0.125,0.125,0.125]
 properties = np.tile([140000,10000,5000,0.3],(len(plies),1))
 
 Lamin = Laminate(plies=plies,thicknesses=thickness,properties=properties)
-ABD = np.round(Lamin.ABDMatrix(),2)
-InvABD = np.round(Lamin.InverseABD(),2)
-print(la.inv(ABD))
-print(InvABD)
-    
+ABD = Lamin.ABDMatrix()
+InvABD = Lamin.InverseABD()

@@ -1,5 +1,6 @@
 import numpy as np
 from assignment1 import failure
+import matplotlib.pyplot as plt
 
 
 def RandomVariable(Mean,STD):
@@ -26,7 +27,7 @@ def RunSimulation():
     Plies = [0,90,45,-45,-45,45,90,0,0,90,45,-45,-45,45,90,0]
     N = 783 #N/mm
     Loading = [np.cos(np.radians(45))*N,np.sin(np.radians(45))*N,0,0,0,0]
-    while Bool == 0:
+    while Bool == 0: #run simulations until failure is generated
         x += 1
         Properties = GenerateProperties()
 
@@ -35,13 +36,24 @@ def RunSimulation():
 
     return x
 
-def Convergence(R):
+def RunRounds(R):
     P = np.zeros(R)
     for i in range(R):
         n = RunSimulation()
         P[i] += (1/n)
 
-    Pf = np.sum(P) / R
+    Pf = np.sum(P) / R #Average failure probability based on R amount of simulation rounds
     return Pf
 
-print(GenerateProperties())
+def Convergence(Plotting):
+    Pfs = np.array([])
+    R = 2
+    Pf1 = Pfs.append(RunRounds(R-1))
+    Pf2 = Pfs.append(RunRounds(R))
+    while Pfs[-1] / Pfs[-2] > 0.05: #Run until failure probability is within 5 percent (can be changed)
+        R += 1
+        Pfs.append(RunRounds(R))
+
+    if Plotting:
+        plt.plot(np.arange(R),Pfs)
+        plt.show()
