@@ -36,31 +36,26 @@ def RunSimulation():
 
     return x
 
-def RunRounds(R):
-    P = np.zeros(R)
-    for i in range(R):
-        n = RunSimulation()
-        P[i] += (1/n)
-
-    Pf = np.sum(P) / R #Average failure probability based on R amount of simulation rounds
-    return Pf
-
-def Convergence(Plotting):
+def Convergence(Plotting,R):
     Pfs = np.array([])
-    R = 2
-    Pfs = np.append(Pfs,RunRounds(R-1)) #Performs at least two simulation rounds
-    Pfs = np.append(Pfs,RunRounds(R))
+    Pfs_conv = np.array([])
+    for i in range(1,R+1):
+        n = RunSimulation()
+        P = 100 / n #Failure Probability Single Round (%)
+        Pfs = np.append(Pfs,P)
+        P_conv = np.sum(Pfs) / i #Average Failure Probability All Rounds
+        Pfs_conv = np.append(Pfs_conv,P_conv)
 
-    while R < 30:
-        R += 1
-        Pf = RunRounds(R)
-        Pfs = np.append(Pfs,Pf)
-        print('attemting convergence at R= ' + str(R))
-        print('average failure probability = ' + str(Pf))
+    print('Convergence is found for Failure Probability = ' + str(Pfs_conv[-1]))
 
     if Plotting:
-        plt.plot(np.arange(1,R+1),Pfs)
+        plt.title('Converge Plot for N = 783 N/mm')
+        plt.xlabel('Number of Rounds')
+        plt.ylabel('Average Failure Probability (%)')
+        plt.plot(np.arange(1,R+1),Pfs_conv)
+        plt.grid()
         plt.show()
+
 
 def FirstPlyFailure(ply_angles,loading):
     ply_angles = np.radians(ply_angles) #Convert Plies to Radians
@@ -124,4 +119,4 @@ def FirstPlyFailure(ply_angles,loading):
 
     return fpf_recorded
 
-Convergence(1)
+Convergence(1,2000)
