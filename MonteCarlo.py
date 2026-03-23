@@ -32,19 +32,30 @@ def RunSimulation():
     while not Bool: #run simulations until failure is generated
         x += 1
         Bool = FirstPlyFailure(Plies,Loading)
-    print('First Ply Failure was detected after ' + str(x) + ' simulations.')
+    #print('First Ply Failure was detected after ' + str(x) + ' simulations.')
 
     return x
 
-def Convergence(Plotting,R):
-    Pfs = np.array([])
-    Pfs_conv = np.array([])
-    for i in range(1,R+1):
+def Convergence(Plotting):
+
+    R = 2
+    n1 = RunSimulation()
+    n2 = RunSimulation()
+    P1 = 1 / n1
+    P2 = 1 / n2 
+    P_conv = (P1+P2)/R
+    Pfs = np.array([P1,P2])
+    Pfs_conv = np.array([P1,P_conv])
+
+    while (np.abs(P_conv - np.average(Pfs_conv)) > 1e-4) or (R < 1000):
+        R += 1
+
         n = RunSimulation()
         P = 100 / n #Failure Probability Single Round (%)
         Pfs = np.append(Pfs,P)
-        P_conv = np.sum(Pfs) / i #Average Failure Probability All Rounds
+        P_conv = np.sum(Pfs) / R #Average Failure Probability All Rounds
         Pfs_conv = np.append(Pfs_conv,P_conv)
+        print(P_conv,np.average(Pfs_conv),R)        
 
     print('Convergence is found for Failure Probability = ' + str(Pfs_conv[-1]))
 
@@ -55,7 +66,6 @@ def Convergence(Plotting,R):
         plt.plot(np.arange(1,R+1),Pfs_conv)
         plt.grid()
         plt.show()
-
 
 def FirstPlyFailure(ply_angles,loading):
     ply_angles = np.radians(ply_angles) #Convert Plies to Radians
@@ -119,4 +129,4 @@ def FirstPlyFailure(ply_angles,loading):
 
     return fpf_recorded
 
-Convergence(1,2000)
+Convergence(1)
