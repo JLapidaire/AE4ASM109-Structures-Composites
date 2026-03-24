@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
-from progressive_damage import failure,lamina_strains_inplane,lamina_stress_inplane,calc_A,calc_Q_laminate,inplane_matrices
+import progressive_damage as pd
+import ABD as abd
 
 thetas = np.linspace(0,90,num=180)
 phis = thetas
-
 
 def EngineeringConstants(A,h):
     ### Engineering Constants of laminate ####
@@ -37,25 +37,25 @@ def LaminateConstants(thetas,phis,plotting):
     vyx_data = np.zeros((len(thetas),len(phis)))
     Gxy_data = np.zeros((len(thetas),len(phis)))
 
+    S, Q_0 = pd.inplane_matrices(E1, E2, v12, G12)
+
+    Q_0degraded = Q_0.copy()
+    Q_0degraded[1, 1] *= 0.15
+    Q_0degraded[0, 1] *= 0.15
+    Q_0degraded[1, 0] *= 0.15
+    Q_0degraded[2, 2] *= 0.15
+
+    active_plies = np.ones(n_plies, dtype=bool)
+    failed_once = np.zeros(n_plies, dtype=bool)
+
     for theta in thetas:
         for phi in phis:
             angles = np.array([+theta,-theta,phi,phi,phi,phi,phi,phi,-theta,+theta,+theta,-theta,phi,phi,phi,phi,phi,phi,-theta,+theta])
             angles = angles * (np.pi / 180)
             n_plies = len(angles)
 
-            S, Q_0 = inplane_matrices(E1, E2, v12, G12)
-
-            Q_0degraded = Q_0.copy()
-            Q_0degraded[1, 1] *= 0.15
-            Q_0degraded[0, 1] *= 0.15
-            Q_0degraded[1, 0] *= 0.15
-            Q_0degraded[2, 2] *= 0.15
-
-            active_plies = np.ones(n_plies, dtype=bool)
-            failed_once = np.zeros(n_plies, dtype=bool)
-
-            Q_all = calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
-            ABD = calc_A(Q_all, t, n_plies)
+            Q_all = pd.calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
+            ABD = pd.calc_A(Q_all, t, n_plies)
 
             Ex, Ey, vxy, vyx, Gxy = EngineeringConstants(ABD,t*n_plies)
             Ex_data[np.argwhere(thetas==theta),np.argwhere(phis==phi)] += (Ex * 10**-3)
@@ -63,7 +63,7 @@ def LaminateConstants(thetas,phis,plotting):
             vxy_data[np.argwhere(thetas==theta),np.argwhere(phis==phi)] += vxy
             vyx_data[np.argwhere(thetas==theta),np.argwhere(phis==phi)] += vyx
             Gxy_data[np.argwhere(thetas==theta),np.argwhere(phis==phi)] += (Gxy * 10**-3)
-            print('for phi = ' + str(phi) + ',for theta = ' + str(theta) + str([Ex, Ey, vxy, vyx, Gxy]))
+            #print('for phi = ' + str(phi) + ',for theta = ' + str(theta) + str([Ex, Ey, vxy, vyx, Gxy]))
 
     if plotting:
         data = np.array([Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data])
@@ -80,6 +80,47 @@ def LaminateConstants(thetas,phis,plotting):
 
     return Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data
 
-Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data = LaminateConstants(thetas,phis,1)
+def LaminateLoading():
+    #Material Properties
+    E1 = 172.3 * 10 ** 3  # MPa
+    E2 = 10.2 * 10 ** 3  # MPa
+    G12 = 5.58 * 10 ** 3  # MPa
+    v12 = 0.25  # [-]
+    t = 0.125 #mm
+
+    #Loading Properties
+    Nx = 300 * 10**-3 #N/mm
+    Ns = 25 * 10**-3 #N/mm
+    My = 18 * 10**3 #N
+    F = np.array([Nx,0,Ns,0,My,0])
+
+    angles = np.array([0,45,-45,90,-60,30,0])
+    angles = angles * (np.pi / 180)
+    n_plies = len(angles)
+
+    S, Q_0 = pd.inplane_matrices(E1, E2, v12, G12)
+
+    Q_0degraded = Q_0.copy()
+    Q_0degraded[1, 1] *= 0.15
+    Q_0degraded[0, 1] *= 0.15
+    Q_0degraded[1, 0] *= 0.15
+    Q_0degraded[2, 2] *= 0.15
+
+    active_plies = np.ones(n_plies, dtype=bool)
+    failed_once = np.zeros(n_plies, dtype=bool)
+
+    Q_all = abd.calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
+    ABD = abd.calc_ABD(Q_all, t, n_plies)
+
+    strain = abd.lamina_strains12(angles,ABD,F,t,n_plies,active_plies)
+    stress = abd.lamina_stress12(strain,Q_0,Q_0degraded,n_plies,failed_once)
+
+    return strain, stress
+
+#Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data = LaminateConstants(thetas,phis,1)
+
+strain, stress = LaminateLoading()
+print(strain)
+#print(stress)
 
 

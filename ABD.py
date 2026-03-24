@@ -111,9 +111,12 @@ def lamina_strains12(angles, abd, F, t, n_plies, active_plies):
             z_k_bottom = t * k - z_midplane
             z_k_top = t * (k+1) - z_midplane
 
+            #Bottom Strain
             strain[0, :, k] = [strain_12_mid[0] + z_k_bottom * strain_12_mid[3],
                                strain_12_mid[1] + z_k_bottom * strain_12_mid[4],
                                strain_12_mid[2] + z_k_bottom * strain_12_mid[5]]
+
+            #Top Strain
             strain[1, :, k] = [strain_12_mid[0] + z_k_top * strain_12_mid[3],
                                strain_12_mid[1] + z_k_top * strain_12_mid[4],
                                strain_12_mid[2] + z_k_top * strain_12_mid[5]]
@@ -128,7 +131,7 @@ def lamina_stress12(strain, Q_0, Q_0degraded, n_plies, failed_once):
     for i in range(n_plies):
         if failed_once[i]==False:
             stress[0,:,i] = Q_0 @ strain[0,:,i]
-            stress[1, :, i] = Q_0 @ strain[1, :, i]
+            stress[1, :, i] = Q_0 @ strain[1,:,i]
 
         else:
             stress[0, :, i] = Q_0degraded @ strain[0, :, i]
@@ -203,160 +206,160 @@ def failure(stress, strain, E1, Ef, v12f, Xt, Xc, Yt, Yc, Stc, n_plies, active_p
 
     return active_plies, failed_once
 
+if __name__ == '__main__':
+    #material data
+    #UD lamina
+    E1 = 172.3*10**3 #MPa
+    E2 = 10.2*10**3 #MPa
+    G12 = 5.58*10**3 #MPa
+    v12 = 0.25 #[-]
+    '''thickness is still a placeholder value'''
+    t = 0.125 #mm
+    #Failure criteria
+    Xt = 1923 #MPa
+    Xc = 1480 #MPa
+    Yt = 84 #MPa
+    Yc = 220 #MPa
+    Stc = 144.5 #MPa
+    Ef = E1
+    v12f = v12
 
-#material data
-#UD lamina
-E1 = 172.3*10**3 #MPa
-E2 = 10.2*10**3 #MPa
-G12 = 5.58*10**3 #MPa
-v12 = 0.25 #[-]
-'''thickness is still a placeholder value'''
-t = 0.125 #mm
-#Failure criteria
-Xt = 1923 #MPa
-Xc = 1480 #MPa
-Yt = 84 #MPa
-Yc = 220 #MPa
-Stc = 144.5 #MPa
-Ef = E1
-v12f = v12
+    base = [0,45,-45,90,30]
+    sym1 = (base)+(base)[::-1]
+    sym2 = sym1+sym1[::-1]
+    sym3 = sym2+sym2[::-1]
+    angles = np.pi/180 * np.array(sym3)
+    n_plies = int(len(angles)) #total number of plies
 
-base = [0,45,-45,90,30]
-sym1 = (base)+(base)[::-1]
-sym2 = sym1+sym1[::-1]
-sym3 = sym2+sym2[::-1]
-angles = np.pi/180 * np.array(sym3)
-n_plies = int(len(angles)) #total number of plies
+    active_plies = []
+    for i in range(n_plies):
+        active_plies.append(True)
 
-active_plies = []
-for i in range(n_plies):
-    active_plies.append(True)
+    failed_once = []
+    for i in range(n_plies):
+        failed_once.append(False)
 
-failed_once = []
-for i in range(n_plies):
-    failed_once.append(False)
+    S, Q_0 = inplane_matrices(E1, E2, v12, G12)
 
-S, Q_0 = inplane_matrices(E1, E2, v12, G12)
-
-Q_0degraded = Q_0.copy()
-Q_0degraded[1,1] *= 0.15
-Q_0degraded[0,1] *= 0.15
-Q_0degraded[1,0] *= 0.15
-Q_0degraded[2,2] *= 0.15
-Q_all = calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
-
-ABD = calc_ABD(Q_all, t,n_plies)
-abd = np.linalg.inv(ABD)
-
-
-number = 12
-ratios = np.zeros((2, number))
-
-for i in range(number):
-    angle = i * 2 * np.pi / number
-    ratios[0, i] = np.cos(angle)
-    ratios[1, i] = np.sin(angle)
-
-first_ply_failure_NxNy = np.full((2, number), np.nan)
-last_ply_failure_NxNy = np.full((2, number), np.nan)
-first_ply_failure_NyNs = np.full((2, number), np.nan)
-last_ply_failure_NyNs = np.full((2, number), np.nan)
-
-# load increment magnitude
-load_step = 10.0
-max_steps = 1000
-
-for i in range(number):
-    # reset laminate state for this loading ratio
-    active_plies = np.ones(n_plies, dtype=bool)
-    failed_once = np.zeros(n_plies, dtype=bool)
-
+    Q_0degraded = Q_0.copy()
+    Q_0degraded[1,1] *= 0.15
+    Q_0degraded[0,1] *= 0.15
+    Q_0degraded[1,0] *= 0.15
+    Q_0degraded[2,2] *= 0.15
     Q_all = calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
-    ABD = calc_ABD(Q_all, t, n_plies)
+
+    ABD = calc_ABD(Q_all, t,n_plies)
     abd = np.linalg.inv(ABD)
 
-    # loading direction for this ratio
-    direction = np.array([ratios[0, i], ratios[1, i], 0.0, 0.0, 0.0, 0.0])
 
+    number = 12
+    ratios = np.zeros((2, number))
+
+    for i in range(number):
+        angle = i * 2 * np.pi / number
+        ratios[0, i] = np.cos(angle)
+        ratios[1, i] = np.sin(angle)
+
+    first_ply_failure_NxNy = np.full((2, number), np.nan)
+    last_ply_failure_NxNy = np.full((2, number), np.nan)
+    first_ply_failure_NyNs = np.full((2, number), np.nan)
+    last_ply_failure_NyNs = np.full((2, number), np.nan)
+
+    # load increment magnitude
     load_step = 10.0
-    Fxy = load_step * direction
-    Fxy_increment = load_step * direction
-
-    fpf_recorded = False
     max_steps = 1000
-    step_counter = 0
 
-    while np.any(active_plies):
-        step_counter += 1
-        if step_counter > max_steps:
-            print(f"max_steps reached at ratio {i}")
-            break
+    for i in range(number):
+        # reset laminate state for this loading ratio
+        active_plies = np.ones(n_plies, dtype=bool)
+        failed_once = np.zeros(n_plies, dtype=bool)
 
-        # save old state explicitly
-        active_old = active_plies.copy()
-        failed_old = failed_once.copy()
+        Q_all = calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
+        ABD = calc_ABD(Q_all, t, n_plies)
+        abd = np.linalg.inv(ABD)
 
-        strain = lamina_strains12(angles, abd, Fxy, t, n_plies, active_plies)
-        stress = lamina_stress12(strain, Q_0, Q_0degraded, n_plies, failed_once)
+        # loading direction for this ratio
+        direction = np.array([ratios[0, i], ratios[1, i], 0.0, 0.0, 0.0, 0.0])
 
-        active_new, failed_new = failure(
-            stress, strain, E1, Ef, v12f, Xt, Xc, Yt, Yc, Stc,
-            n_plies, active_plies, failed_once
-        )
+        load_step = 10.0
+        Fxy = load_step * direction
+        Fxy_increment = load_step * direction
 
-        state_changed = (
-            (not np.array_equal(active_new, active_old)) or
-            (not np.array_equal(failed_new, failed_old))
-        )
+        fpf_recorded = False
+        max_steps = 1000
+        step_counter = 0
 
-        if state_changed:
-            # first state change = first ply failure
-            if not fpf_recorded:
-                first_ply_failure_NxNy[0, i] = Fxy[0]
-                first_ply_failure_NxNy[1, i] = Fxy[1]
-                fpf_recorded = True
-
-            # update state
-            active_plies = active_new
-            failed_once = failed_new
-
-            # if all plies are gone, record LPF at this same load
-            if not np.any(active_plies):
-                last_ply_failure_NxNy[0, i] = Fxy[0]
-                last_ply_failure_NxNy[1, i] = Fxy[1]
+        while np.any(active_plies):
+            step_counter += 1
+            if step_counter > max_steps:
+                print(f"max_steps reached at ratio {i}")
                 break
 
-            # rebuild stiffness and re-analyze at SAME load
-            Q_all = calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
-            ABD = calc_ABD(Q_all, t, n_plies)
-            abd = np.linalg.inv(ABD)
+            # save old state explicitly
+            active_old = active_plies.copy()
+            failed_old = failed_once.copy()
 
-            continue
+            strain = lamina_strains12(angles, abd, Fxy, t, n_plies, active_plies)
+            stress = lamina_stress12(strain, Q_0, Q_0degraded, n_plies, failed_once)
 
-        # no damage at this load -> increase load
-        Fxy = Fxy + Fxy_increment
+            active_new, failed_new = failure(
+                stress, strain, E1, Ef, v12f, Xt, Xc, Yt, Yc, Stc,
+                n_plies, active_plies, failed_once
+            )
 
-    # fallback in case LPF wasn't written inside loop
-    if np.isnan(last_ply_failure_NxNy[0, i]):
-        last_ply_failure_NxNy[0, i] = Fxy[0]
-        last_ply_failure_NxNy[1, i] = Fxy[1]
+            state_changed = (
+                (not np.array_equal(active_new, active_old)) or
+                (not np.array_equal(failed_new, failed_old))
+            )
 
-print("FPF NxNy:")
-print(first_ply_failure_NxNy)
+            if state_changed:
+                # first state change = first ply failure
+                if not fpf_recorded:
+                    first_ply_failure_NxNy[0, i] = Fxy[0]
+                    first_ply_failure_NxNy[1, i] = Fxy[1]
+                    fpf_recorded = True
 
-print("LPF NxNy:")
-print(last_ply_failure_NxNy)
+                # update state
+                active_plies = active_new
+                failed_once = failed_new
+
+                # if all plies are gone, record LPF at this same load
+                if not np.any(active_plies):
+                    last_ply_failure_NxNy[0, i] = Fxy[0]
+                    last_ply_failure_NxNy[1, i] = Fxy[1]
+                    break
+
+                # rebuild stiffness and re-analyze at SAME load
+                Q_all = calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
+                ABD = calc_ABD(Q_all, t, n_plies)
+                abd = np.linalg.inv(ABD)
+
+                continue
+
+            # no damage at this load -> increase load
+            Fxy = Fxy + Fxy_increment
+
+        # fallback in case LPF wasn't written inside loop
+        if np.isnan(last_ply_failure_NxNy[0, i]):
+            last_ply_failure_NxNy[0, i] = Fxy[0]
+            last_ply_failure_NxNy[1, i] = Fxy[1]
+
+    print("FPF NxNy:")
+    print(first_ply_failure_NxNy)
+
+    print("LPF NxNy:")
+    print(last_ply_failure_NxNy)
 
 
-plt.figure(figsize=(7, 7))
-plt.scatter(first_ply_failure_NxNy[0, :], first_ply_failure_NxNy[1, :], label='FPF')
-plt.scatter(last_ply_failure_NxNy[0, :], last_ply_failure_NxNy[1, :], label='LPF')
-plt.axhline(0, linewidth=0.8)
-plt.axvline(0, linewidth=0.8)
-plt.xlabel('Nx')
-plt.ylabel('Ny')
-plt.title('Failure Envelope (Nx-Ny)')
-plt.legend()
-plt.grid(True)
-plt.axis('equal')
-plt.show()
+    plt.figure(figsize=(7, 7))
+    plt.scatter(first_ply_failure_NxNy[0, :], first_ply_failure_NxNy[1, :], label='FPF')
+    plt.scatter(last_ply_failure_NxNy[0, :], last_ply_failure_NxNy[1, :], label='LPF')
+    plt.axhline(0, linewidth=0.8)
+    plt.axvline(0, linewidth=0.8)
+    plt.xlabel('Nx')
+    plt.ylabel('Ny')
+    plt.title('Failure Envelope (Nx-Ny)')
+    plt.legend()
+    plt.grid(True)
+    plt.axis('equal')
+    plt.show()
