@@ -46,14 +46,14 @@ def LaminateConstants(thetas,phis,plotting):
     Q_0degraded[1, 0] *= 0.15
     Q_0degraded[2, 2] *= 0.15
 
-    active_plies = np.ones(n_plies, dtype=bool)
-    failed_once = np.zeros(n_plies, dtype=bool)
-
     for theta in thetas:
         for phi in phis:
             angles = np.array([+theta,-theta,phi,phi,phi,phi,phi,phi,-theta,+theta,+theta,-theta,phi,phi,phi,phi,phi,phi,-theta,+theta])
             angles = angles * (np.pi / 180)
             n_plies = len(angles)
+
+            active_plies = np.ones(n_plies, dtype=bool)
+            failed_once = np.zeros(n_plies, dtype=bool)
 
             Q_all = pd.calc_Q_laminate(Q_0, Q_0degraded, angles, active_plies, failed_once, n_plies)
             ABD = pd.calc_A(Q_all, t, n_plies)
