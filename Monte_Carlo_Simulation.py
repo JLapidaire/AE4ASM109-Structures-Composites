@@ -28,7 +28,7 @@ def RunSimulation():
     Plies = [0,90,45,-45,-45,45,90,0,0,90,45,-45,-45,45,90,0]
     N = 783 #N/mm at 45 degrees
 
-    Loading = np.array([np.cos(np.radians(45))*N,np.sin(np.radians(45))*N,0]) #Force Vector 1x6
+    Loading = np.array([np.cos(np.radians(45))*N,np.sin(np.radians(45))*N,0]) #Force Vector 1x3
     while not Bool: #run simulations until failure is generated
         x += 1
         Bool = FirstPlyFailure(Plies,Loading)

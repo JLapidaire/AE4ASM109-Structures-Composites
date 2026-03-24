@@ -95,7 +95,7 @@ def LaminateLoading(plotting):
     My = 18 * 10**3 #N
     F = np.array([Nx,0,Ns,0,My,0])
 
-    angles = np.array([0,45,-45,90,-60,30,0])
+    angles = np.array([0,45,-45,-45,90,-60,30,0])
     angles = angles * (np.pi / 180)
     n_plies = len(angles)
 
@@ -147,7 +147,7 @@ def LaminateLoading(plotting):
         ax[1,2].plot(Sxy_stitch,t_stitch)
 
         titles = ['Longitudinal Strain','Transverse Strain','Shear Strain','Longitudinal Stress','Transverse Stress','Shear Stress']
-        xlabels = ['Strain [-]','Strain [-]','Strain [-]','Stress [-]','Stress [-]','Stress [-]']
+        xlabels = ['Strain [-]','Strain [-]','Strain [-]','Stress [MPa]','Stress [MPa]','Stress [MPa]']
         ylabels = ['Thickness [mm]','','','Thickness [mm]','','']
         index = 0
 
@@ -169,7 +169,7 @@ def StitchFunctions(a,b):
 
     return stitch
 
-Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data = LaminateConstants(thetas,phis,1)
+#Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data = LaminateConstants(thetas,phis,1)
 strain, stress = LaminateLoading(1)
 
 
