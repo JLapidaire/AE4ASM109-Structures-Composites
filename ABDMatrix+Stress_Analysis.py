@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from mpl_toolkits import mplot3d
 import progressive_damage as pd
 import ABD as abd
@@ -80,7 +81,7 @@ def LaminateConstants(thetas,phis,plotting):
 
     return Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data
 
-def LaminateLoading():
+def LaminateLoading(plotting):
     #Material Properties
     E1 = 172.3 * 10 ** 3  # MPa
     E2 = 10.2 * 10 ** 3  # MPa
@@ -115,12 +116,61 @@ def LaminateLoading():
     strain = abd.lamina_strains12(angles,ABD,F,t,n_plies,active_plies)
     stress = abd.lamina_stress12(strain,Q_0,Q_0degraded,n_plies,failed_once)
 
+    if plotting:
+        strain_bottom = strain[0]
+        strain_top = strain[1]
+        stress_bottom = stress[0]
+        stress_top = stress[1]
+
+        t_bottom = 0 + np.arange(0,n_plies) * t
+        t_top = t + np.arange(0,n_plies) * t
+        t_stitch = StitchFunctions(t_bottom,t_top)
+
+        # Stitch Strains Together For Plotting
+        exx_stitch = StitchFunctions(strain_bottom[0],strain_top[0])
+        eyy_stitch = StitchFunctions(strain_bottom[1],strain_top[1])
+        exy_stitch = StitchFunctions(strain_bottom[2],strain_top[2])
+
+        # Stitch Stresses Together For Plotting
+        Sxx_stitch = StitchFunctions(stress_bottom[0],stress_top[0])
+        Syy_stitch = StitchFunctions(stress_bottom[1],stress_top[1])
+        Sxy_stitch = StitchFunctions(stress_bottom[2],stress_top[2])
+
+        fig,ax = plt.subplots(2,3)
+        #Plot Strains
+        ax[0,0].plot(exx_stitch,t_stitch)
+        ax[0,1].plot(eyy_stitch,t_stitch)
+        ax[0,2].plot(exy_stitch,t_stitch)
+        #Plot Stresses
+        ax[1,0].plot(Sxx_stitch,t_stitch)
+        ax[1,1].plot(Syy_stitch,t_stitch)
+        ax[1,2].plot(Sxy_stitch,t_stitch)
+
+        titles = ['Longitudinal Strain','Transverse Strain','Shear Strain','Longitudinal Stress','Transverse Stress','Shear Stress']
+        xlabels = ['Strain [-]','Strain [-]','Strain [-]','Stress [-]','Stress [-]','Stress [-]']
+        ylabels = ['Thickness [mm]','','','Thickness [mm]','','']
+        index = 0
+
+        for axis in ax.flat:
+            axis.set(title=titles[index],xlabel=xlabels[index],ylabel=ylabels[index])
+            axis.yaxis.set_major_locator(ticker.MultipleLocator(t))
+            axis.grid()
+            index += 1
+
+        plt.show()
+
     return strain, stress
 
-#Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data = LaminateConstants(thetas,phis,1)
+def StitchFunctions(a,b):
+    'Stitches together to arrays element-per-element'
+    stitch = np.empty((a.size + b.size,), dtype=a.dtype)
+    stitch[0::2] = a
+    stitch[1::2] = b
 
-strain, stress = LaminateLoading()
-print(strain)
-#print(stress)
+    return stitch
+
+Ex_data,Ey_data,vxy_data,vyx_data,Gxy_data = LaminateConstants(thetas,phis,1)
+strain, stress = LaminateLoading(1)
+
 
 
