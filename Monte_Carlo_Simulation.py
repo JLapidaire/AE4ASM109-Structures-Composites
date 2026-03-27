@@ -20,52 +20,47 @@ def GenerateProperties():
 
     return Properties
 
-def RunSimulation():
-    x = 0
-    Bool = 0
-
+def n_basedSimulation(plotting,load):
     # Input Parameters From Assignment
     Plies = [0,90,45,-45,-45,45,90,0,0,90,45,-45,-45,45,90,0]
-    N = 783 #N/mm at 45 degrees
-
+    N = load #N/mm at 45 degrees
     Loading = np.array([np.cos(np.radians(45))*N,np.sin(np.radians(45))*N,0]) #Force Vector 1x3
-    while not Bool: #run simulations until failure is generated
-        x += 1
-        Bool = FirstPlyFailure(Plies,Loading)
-    #print('First Ply Failure was detected after ' + str(x) + ' simulations.')
 
-    return x
+    #Convergence Settings
+    min_failures = 10
+    target_error = 1e-4
+    R_error = 1
 
-def Convergence(Plotting):
+    Pfs = np.array([])
+    failure_total = 0
+    n = 1
+    while R_error > target_error or failure_total < min_failures:
+        failure = FirstPlyFailure(Plies,Loading)
+        failure_total += failure
+        Pf = failure_total / n
+        Pfs = np.append(Pfs,Pf)
 
-    R = 2
-    n1 = RunSimulation()
-    n2 = RunSimulation()
-    P1 = 1 / n1
-    P2 = 1 / n2 
-    P_conv = (P1+P2)/R
-    Pfs = np.array([P1,P2])
-    Pfs_conv = np.array([P1,P_conv])
+        #Standard Error
+        S_error = np.std(Pfs) / np.sqrt(n)
+        #Relative Error
+        R_error = S_error / np.average(Pfs)
 
-    while (np.abs(P_conv - np.average(Pfs_conv)) > 1e-4) or (R < 1000):
-        R += 1
+        if failure:
+            print('Failure detected at n = ' + str(n))
+            print('Current Pf = ' + str(Pf) + ' and relative error of ' + str(R_error))
 
-        n = RunSimulation()
-        P = 100 / n #Failure Probability Single Round (%)
-        Pfs = np.append(Pfs,P)
-        P_conv = np.sum(Pfs) / R #Average Failure Probability All Rounds
-        Pfs_conv = np.append(Pfs_conv,P_conv)
-        print(P_conv,np.average(Pfs_conv),R)        
+        n += 1
 
-    print('Convergence is found for Failure Probability = ' + str(Pfs_conv[-1]))
-
-    if Plotting:
-        plt.title('Converge Plot for N = 783 N/mm')
-        plt.xlabel('Number of Rounds')
-        plt.ylabel('Average Failure Probability (%)')
-        plt.plot(np.arange(1,R+1),Pfs_conv)
+    if plotting:
+        plt.figure(figsize=(16,9)) #16:9 Aspect Ratio
+        plt.plot(np.arange(1,n),Pfs*100)
+        plt.title('Converge Plot for N = ' + str(N) + ' N/mm')
+        plt.ylabel('Average Failure Probability [%]')
+        plt.xlabel('Number of Simulations [-]')
         plt.grid()
         plt.show()
+
+    return Pfs*100
 
 def FirstPlyFailure(ply_angles,loading):
     ply_angles = np.radians(ply_angles) #Convert Plies to Radians
@@ -82,9 +77,9 @@ def FirstPlyFailure(ply_angles,loading):
     Yc = Properties[7]
     Stc = Properties[8]
 
-    #Placeholder properties
-    Ef = E1
-    v12f = v12
+    #Not-Given Properties
+    Ef = 230 * 10**3 #MPa
+    v12f = 0.25
     t = 0.125 #mm
 
     S, Q_0 = inplane_matrices(E1, E2, v12, G12)
@@ -129,4 +124,6 @@ def FirstPlyFailure(ply_angles,loading):
 
     return fpf_recorded
 
-Convergence(1)
+load = 783 #N/mm
+Pfs = n_basedSimulation(1,load)
+print('Converged Failure Probability at Pf = ' + str(Pfs[-1]) + ', at n = ' + str(len(Pfs)))
